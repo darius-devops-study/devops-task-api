@@ -72,3 +72,13 @@ jobs:
           -p:NuGetAuditMode=all
           -p:NuGetAuditLevel=low
           -p:TreatWarningsAsErrors=true
+
+      - name: Проверить зависимости TelegramNotifier
+        run: >
+          dotnet restore
+          tools/TelegramNotifier/TelegramNotifier.csproj
+          --force
+          -p:NuGetAudit=true
+          -p:NuGetAuditMode=all
+          -p:NuGetAuditLevel=low
+          -p:TreatWarningsAsErrors=true
