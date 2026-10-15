@@ -1,5 +1,13 @@
 # История изменений
 
+## 0.3.0 — 2026-10-15
+
+- Изменение: Добавлены публикация Docker-образа и уведомление Telegram
+- Ветка: `feature/dockerhub-telegram`
+- PR: [#7](https://github.com/darius-devops-study/devops-task-api/pull/7)
+
+<!-- release-pr:7 version:0.3.0 -->
+
 ## 0.2.1 — 2026-10-15
 
 - Изменение: Исправлено форматирование changelog
