@@ -82,4 +82,4 @@ dotnet test DevOpsTask/TaskApi.Tests/TaskApi.Tests.csproj --configuration Releas
 
 Ссылка на группу с обновлениями: https://t.me/+4U8z-NuIEoU2OTIy
 
-![](screenshots\2026-10-16%2000-35-14.png)
+![](screenshots/2026-10-16 00-35-14.png)
