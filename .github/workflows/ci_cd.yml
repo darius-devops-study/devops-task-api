@@ -1,0 +1,34 @@
+name: CI/CD
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  prepare:
+    name: Проверка структуры проекта
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Получить код репозитория
+        uses: actions/checkout@v5
+
+      - name: Проверить основные файлы
+        run: |
+          test -f DevOpsTask/TaskApi/TaskApi.csproj
+          test -f Dockerfile
+          test -f .dockerignore
+          test -f compose.yaml
+          test -s version
+          test -s changelog.md
+
+      - name: Проверить формат версии
+        run: |
+          grep -Ex '[0-9]+\.[0-9]+\.[0-9]+' version
+
+      - name: Показать версию и changelog
+        run: |
+          cat version
+          cat changelog.md

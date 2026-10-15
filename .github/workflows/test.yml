@@ -1,0 +1,18 @@
+name: Tests
+
+on:
+  workflow_call:
+
+permissions:
+  contents: read
+
+jobs:
+  tests:
+    name: Тестирование ещё не настроено
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Сообщить об отсутствии настройки
+        run: |
+          echo "Тестирование будет настроено на следующем этапе."
+          exit 1
