@@ -1,5 +1,13 @@
 # История изменений
 
+## 0.4.3 — 2026-10-15
+
+- Изменение: Update README.md
+- Ветка: `hotfix/readme-image2`
+- PR: [#11](https://github.com/darius-devops-study/devops-task-api/pull/11)
+
+<!-- release-pr:11 version:0.4.3 -->
+
 ## 0.4.2 — 2026-10-15
 
 - Изменение: Update README.md
