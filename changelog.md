@@ -1,5 +1,13 @@
 # История изменений
 
+## 0.2.1 — 2026-10-15
+
+- Изменение: Исправлено форматирование changelog
+- Ветка: `hotfix/changelog-format`
+- PR: [#6](https://github.com/darius-devops-study/devops-task-api/pull/6)
+
+<!-- release-pr:6 version:0.2.1 -->
+
 ## 0.2.0 — 2026-10-15
 
 - Изменение: Добавлено обновление версии и changelog на C#
