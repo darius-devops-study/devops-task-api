@@ -1,5 +1,13 @@
 # История изменений
 
+## 0.4.2 — 2026-10-15
+
+- Изменение: Update README.md
+- Ветка: `hotfix/readme-image`
+- PR: [#10](https://github.com/darius-devops-study/devops-task-api/pull/10)
+
+<!-- release-pr:10 version:0.4.2 -->
+
 ## 0.4.1 — 2026-10-15
 
 - Изменение: Добавлены ссылка на Telegram и скриншот уведомления
