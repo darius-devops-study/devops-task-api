@@ -2,17 +2,170 @@ name: Deploy
 
 on:
   workflow_call:
+    inputs:
+      source_ref:
+        required: true
+        type: string
+
+      docker_image:
+        required: true
+        type: string
+
+      release_tag:
+        required: true
+        type: string
 
 permissions:
   contents: read
 
 jobs:
   deploy:
-    name: Деплой ещё не настроен
-    runs-on: ubuntu-latest
+    name: Деплой на локальный компьютер
+
+    if: >
+      github.event_name == 'pull_request' &&
+      github.event.action == 'closed' &&
+      github.event.pull_request.merged == true &&
+      github.event.pull_request.base.ref == 'main' &&
+      github.event.pull_request.head.repo.full_name == github.repository &&
+      (
+        startsWith(github.event.pull_request.head.ref, 'feature/') ||
+        startsWith(github.event.pull_request.head.ref, 'hotfix/')
+      )
+
+    runs-on:
+      - self-hosted
+      - Windows
+      - X64
+      - task-api-prod
+
+    timeout-minutes: 15
+
+    permissions:
+      contents: read
+      pull-requests: write
+      issues: write
+
+    defaults:
+      run:
+        shell: pwsh
+
+    env:
+      DOCKERHUB_IMAGE: ${{ inputs.docker_image }}
+      RELEASE_TAG: ${{ inputs.release_tag }}
+      COMPOSE_PROJECT_NAME: devops-task-prod
 
     steps:
-      - name: Сообщить об отсутствии настройки
+      - name: Получить код выпуска
+        uses: actions/checkout@v5
+        with:
+          ref: ${{ inputs.source_ref }}
+          persist-credentials: false
+
+      - name: Проверить Docker
         run: |
-          echo "Деплой пока не настроен."
-          exit 1
+          docker info
+
+          if ($LASTEXITCODE -ne 0) {
+            throw "Docker недоступен. Проверь Docker Desktop."
+          }
+
+          docker compose version
+
+          if ($LASTEXITCODE -ne 0) {
+            throw "Docker Compose недоступен."
+          }
+
+      - name: Проверить конфигурацию Compose
+        run: |
+          docker compose -f compose.prod.yaml config --quiet
+
+          if ($LASTEXITCODE -ne 0) {
+            throw "Ошибка конфигурации compose.prod.yaml."
+          }
+
+      - name: Скачать опубликованный образ
+        run: |
+          docker compose -f compose.prod.yaml pull
+
+          if ($LASTEXITCODE -ne 0) {
+            throw "Не удалось скачать образ из Docker Hub."
+          }
+
+      - name: Запустить приложение
+        run: |
+          docker compose -f compose.prod.yaml up -d --remove-orphans
+
+          if ($LASTEXITCODE -ne 0) {
+            throw "Не удалось запустить приложение."
+          }
+
+      - name: Проверить API
+        run: |
+          $isReady = $false
+
+          for ($attempt = 1; $attempt -le 15; $attempt++) {
+            try {
+              $response = Invoke-WebRequest `
+                -Uri "http://127.0.0.1:8080/api/tasks" `
+                -TimeoutSec 5
+
+              if ($response.StatusCode -eq 200) {
+                $isReady = $true
+                break
+              }
+            } catch {
+              Write-Host "Приложение ещё недоступно. Попытка $attempt из 15."
+            }
+
+            Start-Sleep -Seconds 2
+          }
+
+          if ($isReady -eq $false) {
+            throw "После деплоя API не ответил с кодом 200."
+          }
+
+          Write-Host "API работает. Получен ответ HTTP 200."
+
+      - name: Показать состояние контейнера
+        run: |
+          docker compose -f compose.prod.yaml ps
+
+          if ($LASTEXITCODE -ne 0) {
+            throw "Не удалось получить состояние контейнера."
+          }
+
+      - name: Добавить метку PROD
+        uses: actions/github-script@v8
+        with:
+          script: |
+            try {
+              await github.rest.issues.getLabel({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                name: "PROD"
+              });
+            } catch (error) {
+              if (error.status !== 404) {
+                throw error;
+              }
+
+              await github.rest.issues.createLabel({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                name: "PROD",
+                color: "0E8A16"
+              });
+            }
+
+            await github.rest.issues.addLabels({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.payload.pull_request.number,
+              labels: ["PROD"]
+            });
+
+      - name: Показать логи при ошибке
+        if: failure()
+        run: |
+          docker compose -f compose.prod.yaml logs --tail 100

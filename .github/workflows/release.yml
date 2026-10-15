@@ -332,3 +332,60 @@ jobs:
           dotnet run
           --project tools/TelegramNotifier/TelegramNotifier.csproj
           --configuration Release
+
+  deploy:
+    name: Деплой
+    needs:
+      - version
+      - notify
+
+    permissions:
+      contents: read
+      pull-requests: write
+      issues: write
+
+    uses: ./.github/workflows/deploy.yml
+
+    with:
+      source_ref: ${{ needs.version.outputs.commit }}
+      docker_image: ${{ vars.DOCKERHUB_IMAGE }}
+      release_tag: ${{ needs.version.outputs.tag }}
+
+  github_release:
+    name: Создание GitHub Release
+    needs:
+      - version
+      - deploy
+
+    runs-on: ubuntu-latest
+
+    permissions:
+      contents: write
+
+    steps:
+      - name: Скачать changelog
+        uses: actions/download-artifact@v4
+        with:
+          name: changelog-${{ needs.version.outputs.version }}
+          path: release-data
+
+      - name: Создать или обновить релиз
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          RELEASE_TAG: ${{ needs.version.outputs.tag }}
+        run: |
+          if gh release view "$RELEASE_TAG" > /dev/null 2>&1; then
+            gh release edit "$RELEASE_TAG" \
+              --title "TaskApi $RELEASE_TAG" \
+              --notes-file release-data/changelog.md
+          else
+            gh release create "$RELEASE_TAG" \
+              --verify-tag \
+              --title "TaskApi $RELEASE_TAG" \
+              --notes-file release-data/changelog.md
+          fi
+
+          gh release upload "$RELEASE_TAG" \
+            release-data/changelog.md \
+            --clobber
