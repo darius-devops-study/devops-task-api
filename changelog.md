@@ -1,5 +1,13 @@
 # История изменений
 
+## 0.4.0 — 2026-10-15
+
+- Изменение: Добавлены локальный деплой и GitHub Release
+- Ветка: `feature/deploy-release`
+- PR: [#8](https://github.com/darius-devops-study/devops-task-api/pull/8)
+
+<!-- release-pr:8 version:0.4.0 -->
+
 ## 0.3.0 — 2026-10-15
 
 - Изменение: Добавлены публикация Docker-образа и уведомление Telegram
