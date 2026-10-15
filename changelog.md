@@ -1,3 +1,13 @@
+# История изменений
+
+## 0.2.0 — 2026-10-15
+
+- Изменение: Добавлено обновление версии и changelog на C#
+- Ветка: `feature/version-changelog`
+- PR: [#5](https://github.com/darius-devops-study/devops-task-api/pull/5)
+
+<!-- release-pr:5 version:0.2.0 -->
+
 \# История изменений
 
 
@@ -27,4 +37,3 @@
 \- feature/docker
 
 \- feature/pipeline-structure
-
