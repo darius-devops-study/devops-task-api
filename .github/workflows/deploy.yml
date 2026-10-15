@@ -1,0 +1,18 @@
+name: Deploy
+
+on:
+  workflow_call:
+
+permissions:
+  contents: read
+
+jobs:
+  deploy:
+    name: Деплой ещё не настроен
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Сообщить об отсутствии настройки
+        run: |
+          echo "Деплой пока не настроен."
+          exit 1
