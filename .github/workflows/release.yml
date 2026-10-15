@@ -114,7 +114,6 @@ jobs:
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
 
           git add version changelog.md
-
           git commit -m "[$NEW_VERSION] <- [$OLD_VERSION] $UPDATE_TYPE up"
           git tag "$RELEASE_TAG"
 
@@ -194,3 +193,142 @@ jobs:
                 "sec-passed"
               ]
             });
+
+  publish:
+    name: Публикация в Docker Hub
+    needs: version
+    runs-on: ubuntu-latest
+
+    permissions:
+      contents: read
+      pull-requests: write
+      issues: write
+
+    steps:
+      - name: Получить код выпуска
+        uses: actions/checkout@v5
+        with:
+          ref: ${{ needs.version.outputs.commit }}
+          persist-credentials: false
+
+      - name: Проверить настройки Docker Hub
+        env:
+          DOCKERHUB_USERNAME: ${{ secrets.DOCKERHUB_USERNAME }}
+          DOCKERHUB_TOKEN: ${{ secrets.DOCKERHUB_TOKEN }}
+          DOCKERHUB_IMAGE: ${{ vars.DOCKERHUB_IMAGE }}
+        run: |
+          if [ -z "$DOCKERHUB_USERNAME" ]; then
+            echo "Не задан секрет DOCKERHUB_USERNAME"
+            exit 1
+          fi
+
+          if [ -z "$DOCKERHUB_TOKEN" ]; then
+            echo "Не задан секрет DOCKERHUB_TOKEN"
+            exit 1
+          fi
+
+          if [ -z "$DOCKERHUB_IMAGE" ]; then
+            echo "Не задана переменная DOCKERHUB_IMAGE"
+            exit 1
+          fi
+
+      - name: Настроить Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Войти в Docker Hub
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      - name: Собрать и опубликовать образ
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: ./Dockerfile
+          push: true
+          platforms: linux/amd64
+          tags: ${{ vars.DOCKERHUB_IMAGE }}:${{ needs.version.outputs.tag }}
+
+      - name: Обновить описание и README в Docker Hub
+        uses: peter-evans/dockerhub-description@v5
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+          repository: ${{ vars.DOCKERHUB_IMAGE }}
+          short-description: "API списка задач на ASP.NET Core. Учебный проект DevOps."
+          readme-filepath: ./README.md
+
+      - name: Добавить метку dockerhub
+        uses: actions/github-script@v8
+        with:
+          script: |
+            try {
+              await github.rest.issues.getLabel({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                name: "dockerhub"
+              });
+            } catch (error) {
+              if (error.status !== 404) {
+                throw error;
+              }
+
+              await github.rest.issues.createLabel({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                name: "dockerhub",
+                color: "1D76DB"
+              });
+            }
+
+            await github.rest.issues.addLabels({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.payload.pull_request.number,
+              labels: ["dockerhub"]
+            });
+
+  notify:
+    name: Уведомление в Telegram
+    needs:
+      - version
+      - publish
+
+    runs-on: ubuntu-latest
+
+    permissions:
+      contents: read
+
+    steps:
+      - name: Получить код выпуска
+        uses: actions/checkout@v5
+        with:
+          ref: ${{ needs.version.outputs.commit }}
+          persist-credentials: false
+
+      - name: Установить .NET
+        uses: actions/setup-dotnet@v5
+        with:
+          dotnet-version: "8.0.x"
+
+      - name: Скачать changelog
+        uses: actions/download-artifact@v4
+        with:
+          name: changelog-${{ needs.version.outputs.version }}
+          path: release-data
+
+      - name: Отправить уведомление и changelog
+        env:
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+          RELEASE_VERSION: ${{ needs.version.outputs.version }}
+          RELEASE_TAG: ${{ needs.version.outputs.tag }}
+          DOCKERHUB_IMAGE: ${{ vars.DOCKERHUB_IMAGE }}
+          PR_URL: ${{ github.event.pull_request.html_url }}
+          PR_AUTHOR: ${{ github.event.pull_request.user.login }}
+          CHANGELOG_PATH: release-data/changelog.md
+        run: >
+          dotnet run
+          --project tools/TelegramNotifier/TelegramNotifier.csproj
+          --configuration Release

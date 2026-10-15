@@ -1,5 +1,6 @@
 <Solution>
   <Project Path="../tools/ReleaseTools/ReleaseTools.csproj" />
+  <Project Path="../tools/TelegramNotifier/TelegramNotifier.csproj" />
   <Project Path="TaskApi.Tests/TaskApi.Tests.csproj" />
   <Project Path="TaskApi/TaskApi.csproj" />
 </Solution>
