@@ -14,7 +14,7 @@ namespace TaskApi.Tests.Unit
 
             TaskItem task = service.Create("Настроить Docker");
 
-            Assert.Equal(999, task.Id);
+            Assert.Equal(1, task.Id);
             Assert.Equal("Настроить Docker", task.Title);
             Assert.False(task.IsCompleted);
             Assert.Single(service.GetAll());
