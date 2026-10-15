@@ -7,12 +7,50 @@ permissions:
   contents: read
 
 jobs:
-  security:
-    name: Проверки безопасности ещё не настроены
+  antivirus:
+    name: ClamAV
     runs-on: ubuntu-latest
 
     steps:
-      - name: Сообщить об отсутствии настройки
+      - name: Получить код
+        uses: actions/checkout@v5
+        with:
+          persist-credentials: false
+
+      - name: Установить ClamAV
         run: |
-          echo "Проверки безопасности будут настроены на следующем этапе."
-          exit 1
+          sudo apt-get update
+          sudo apt-get install -y clamav clamav-freshclam
+
+      - name: Обновить антивирусные базы
+        run: |
+          sudo systemctl stop clamav-freshclam
+          sudo freshclam
+
+      - name: Проверить файлы репозитория
+        run: clamscan --recursive --infected --exclude-dir='(^|/)\.git(/|$)' .
+
+  dependencies:
+    name: NuGet Audit
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Получить код
+        uses: actions/checkout@v5
+        with:
+          persist-credentials: false
+
+      - name: Установить .NET
+        uses: actions/setup-dotnet@v5
+        with:
+          dotnet-version: "8.0.x"
+
+      - name: Проверить зависимости
+        run: >
+          dotnet restore
+          DevOpsTask/TaskApi.Tests/TaskApi.Tests.csproj
+          --force
+          -p:NuGetAudit=true
+          -p:NuGetAuditMode=all
+          -p:NuGetAuditLevel=low
+          -p:TreatWarningsAsErrors=true

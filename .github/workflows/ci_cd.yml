@@ -1,34 +1,133 @@
 name: CI/CD
 
 on:
+  pull_request:
+    branches:
+      - main
+    types:
+      - opened
+      - synchronize
+      - reopened
   workflow_dispatch:
 
 permissions:
   contents: read
 
+concurrency:
+  group: checks-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
 jobs:
   prepare:
-    name: Проверка структуры проекта
+    name: Подготовка
     runs-on: ubuntu-latest
 
+    permissions:
+      contents: read
+      pull-requests: write
+
     steps:
-      - name: Получить код репозитория
+      - name: Удалить прежние метки проверок
+        if: >
+          github.event_name == 'pull_request' &&
+          github.event.pull_request.head.repo.full_name == github.repository
+        uses: actions/github-script@v8
+        with:
+          script: |
+            const labels = ["test-passed", "sec-passed"];
+
+            for (const label of labels) {
+              try {
+                await github.rest.issues.removeLabel({
+                  owner: context.repo.owner,
+                  repo: context.repo.repo,
+                  issue_number: context.issue.number,
+                  name: label
+                });
+              } catch (error) {
+                if (error.status !== 404) {
+                  throw error;
+                }
+              }
+            }
+
+      - name: Получить код
         uses: actions/checkout@v5
+        with:
+          persist-credentials: false
 
       - name: Проверить основные файлы
         run: |
           test -f DevOpsTask/TaskApi/TaskApi.csproj
+          test -f DevOpsTask/TaskApi.Tests/TaskApi.Tests.csproj
           test -f Dockerfile
           test -f .dockerignore
           test -f compose.yaml
           test -s version
           test -s changelog.md
-
-      - name: Проверить формат версии
-        run: |
           grep -Ex '[0-9]+\.[0-9]+\.[0-9]+' version
 
-      - name: Показать версию и changelog
-        run: |
-          cat version
-          cat changelog.md
+  tests:
+    name: Тестирование
+    needs: prepare
+    uses: ./.github/workflows/test.yml
+
+  security:
+    name: Безопасность
+    needs: tests
+    uses: ./.github/workflows/sec.yml
+
+  labels:
+    name: Обновить метки PR
+    needs:
+      - tests
+      - security
+
+    if: >
+      always() &&
+      !cancelled() &&
+      github.event_name == 'pull_request' &&
+      github.event.pull_request.head.repo.full_name == github.repository
+
+    runs-on: ubuntu-latest
+
+    permissions:
+      pull-requests: write
+
+    steps:
+      - name: Добавить метки успешных проверок
+        uses: actions/github-script@v8
+        env:
+          TEST_RESULT: ${{ needs.tests.result }}
+          SECURITY_RESULT: ${{ needs.security.result }}
+        with:
+          script: |
+            const pullRequest = await github.rest.pulls.get({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              pull_number: context.issue.number
+            });
+
+            if (pullRequest.data.head.sha !== context.payload.pull_request.head.sha) {
+              core.info("В PR уже появился новый коммит. Метки не обновляем.");
+              return;
+            }
+
+            const labels = [];
+
+            if (process.env.TEST_RESULT === "success") {
+              labels.push("test-passed");
+            }
+
+            if (process.env.SECURITY_RESULT === "success") {
+              labels.push("sec-passed");
+            }
+
+            if (labels.length > 0) {
+              await github.rest.issues.addLabels({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: context.issue.number,
+                labels: labels
+              });
+            }

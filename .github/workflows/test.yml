@@ -8,11 +8,31 @@ permissions:
 
 jobs:
   tests:
-    name: Тестирование ещё не настроено
+    name: Tests - ${{ matrix.category }}
     runs-on: ubuntu-latest
 
+    strategy:
+      fail-fast: false
+      matrix:
+        category:
+          - Unit
+          - Integration
+
     steps:
-      - name: Сообщить об отсутствии настройки
-        run: |
-          echo "Тестирование будет настроено на следующем этапе."
-          exit 1
+      - name: Получить код
+        uses: actions/checkout@v5
+        with:
+          persist-credentials: false
+
+      - name: Установить .NET
+        uses: actions/setup-dotnet@v5
+        with:
+          dotnet-version: "8.0.x"
+
+      - name: Запустить тесты
+        run: >
+          dotnet test
+          DevOpsTask/TaskApi.Tests/TaskApi.Tests.csproj
+          --configuration Release
+          --filter "Category=${{ matrix.category }}"
+          --logger "console;verbosity=normal"
