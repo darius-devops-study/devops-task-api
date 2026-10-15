@@ -1,0 +1,32 @@
+@baseUrl = http://localhost:5066
+
+### Получить список задач
+GET {{baseUrl}}/api/tasks
+
+### Создать задачу
+POST {{baseUrl}}/api/tasks
+Content-Type: application/json
+
+{
+  "title": "Настроить GitHub Actions"
+}
+
+### Получить задачу по ID
+GET {{baseUrl}}/api/tasks/1
+
+### Отметить задачу выполненной
+PUT {{baseUrl}}/api/tasks/1/complete
+
+### Проверить изменённую задачу
+GET {{baseUrl}}/api/tasks/1
+
+### Проверить отсутствующую задачу
+GET {{baseUrl}}/api/tasks/999
+
+### Проверить пустое название
+POST {{baseUrl}}/api/tasks
+Content-Type: application/json
+
+{
+  "title": ""
+}
