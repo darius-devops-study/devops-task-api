@@ -2,6 +2,12 @@ name: Security
 
 on:
   workflow_call:
+    inputs:
+      source_ref:
+        description: Коммит для проверки
+        required: false
+        type: string
+        default: ""
 
 permissions:
   contents: read
@@ -15,6 +21,7 @@ jobs:
       - name: Получить код
         uses: actions/checkout@v5
         with:
+	  ref: ${{ inputs.source_ref || github.sha }}
           persist-credentials: false
 
       - name: Установить ClamAV
@@ -38,6 +45,7 @@ jobs:
       - name: Получить код
         uses: actions/checkout@v5
         with:
+	  ref: ${{ inputs.source_ref || github.sha }}
           persist-credentials: false
 
       - name: Установить .NET
@@ -45,10 +53,20 @@ jobs:
         with:
           dotnet-version: "8.0.x"
 
-      - name: Проверить зависимости
+        - name: Проверить зависимости приложения и тестов
         run: >
           dotnet restore
           DevOpsTask/TaskApi.Tests/TaskApi.Tests.csproj
+          --force
+          -p:NuGetAudit=true
+          -p:NuGetAuditMode=all
+          -p:NuGetAuditLevel=low
+          -p:TreatWarningsAsErrors=true
+
+      - name: Проверить зависимости ReleaseTools
+        run: >
+          dotnet restore
+          tools/ReleaseTools/ReleaseTools.csproj
           --force
           -p:NuGetAudit=true
           -p:NuGetAuditMode=all
