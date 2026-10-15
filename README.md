@@ -77,3 +77,9 @@ dotnet test DevOpsTask/TaskApi.Tests/TaskApi.Tests.csproj --configuration Releas
 Слияние веток `feature/` и `hotfix/` в `main` запускает проверку, выпуск версии, публикацию образа, уведомление Telegram, локальный деплой и создание GitHub Release. Конфигурация находится в `.github/workflows`.
 
 Для локального деплоя должны работать Docker Desktop и Windows runner с меткой `task-api-prod`. Приложение доступно на компьютере runner по адресу <http://localhost:8080/api/tasks>.
+
+## Telegram группа
+
+Ссылка на группу с обновлениями: https://t.me/+4U8z-NuIEoU2OTIy
+
+![](screenshots\2026-10-16%2000-35-14.png)
