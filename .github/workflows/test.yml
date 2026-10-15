@@ -28,7 +28,7 @@ jobs:
       - name: Получить код
         uses: actions/checkout@v5
         with:
-	  ref: ${{ inputs.source_ref || github.sha }}
+          ref: ${{ inputs.source_ref || github.sha }}
           persist-credentials: false
 
       - name: Установить .NET
