@@ -53,7 +53,7 @@ jobs:
         with:
           dotnet-version: "8.0.x"
 
-        - name: Проверить зависимости приложения и тестов
+      - name: Проверить зависимости приложения и тестов
         run: >
           dotnet restore
           DevOpsTask/TaskApi.Tests/TaskApi.Tests.csproj
